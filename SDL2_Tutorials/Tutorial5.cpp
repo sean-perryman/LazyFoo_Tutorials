@@ -15,6 +15,7 @@ enum KeyPressSurfaces
 	KEY_PRESS_SURFACE_DOWN,
 	KEY_PRESS_SURFACE_LEFT,
 	KEY_PRESS_SURFACE_RIGHT,
+	KEY_PRESS_SURFACE_PAGEDOWN,
 	KEY_PRESS_SURFACE_TOTAL
 };
 
@@ -83,8 +84,20 @@ SDL_Surface* loadSurface(std::string path)
 	{
 		printf("Unable to load image %s! SDL Error: %s\n", path.c_str(), SDL_GetError());
 	}
+	else
+	{
+		//Convert surface to screen format
+		optimizedSurface = SDL_ConvertSurface(loadedSurface, gScreenSurface->format, NULL);
+		if (optimizedSurface == NULL)
+		{
+			printf("Unable to optimize image %s! SDL Error: %s\n", path.c_str(), SDL_GetError());
+		}
 
-	return loadedSurface;
+		//Get rid of the old loaded surface
+		SDL_FreeSurface(loadedSurface);
+	}
+
+	return optimizedSurface;
 }
 
 bool loadMedia()
@@ -129,6 +142,14 @@ bool loadMedia()
 	if (gKeyPressSurfaces[KEY_PRESS_SURFACE_RIGHT] == NULL)
 	{
 		printf("Failed to load right image!\n");
+		success = false;
+	}
+
+	//Load default surface
+	gKeyPressSurfaces[KEY_PRESS_SURFACE_PAGEDOWN] = loadSurface("stretch.bmp");
+	if (gKeyPressSurfaces[KEY_PRESS_SURFACE_PAGEDOWN] == NULL)
+	{
+		printf("Failed to load pagedown image!\n");
 		success = false;
 	}
 
@@ -201,6 +222,9 @@ int main(int argc, char* args[])
 				case SDLK_RIGHT:
 					gCurrentSurface = gKeyPressSurfaces[KEY_PRESS_SURFACE_RIGHT];
 					break;
+				case SDLK_PAGEDOWN:
+					gCurrentSurface = gKeyPressSurfaces[KEY_PRESS_SURFACE_PAGEDOWN];
+					break;
 				default:
 					gCurrentSurface = gKeyPressSurfaces[KEY_PRESS_SURFACE_DEFAULT];
 					break;
@@ -209,8 +233,13 @@ int main(int argc, char* args[])
 			}
 		}
 
-		//Apply the current image
-		SDL_BlitSurface(gCurrentSurface, NULL, gScreenSurface, NULL);
+		//Apply the image stretched
+		SDL_Rect stretchRect;
+		stretchRect.x = 0;
+		stretchRect.y = 0;
+		stretchRect.w = SCREEN_WIDTH;
+		stretchRect.h = SCREEN_HEIGHT;
+		SDL_BlitScaled(gCurrentSurface, NULL, gScreenSurface, &stretchRect);
 
 		//Update the surface
 		SDL_UpdateWindowSurface(gWindow);
